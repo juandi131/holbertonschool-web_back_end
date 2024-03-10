@@ -1,29 +1,68 @@
 #!/usr/bin/env python3
-"""Log stats from collection"""
-
+"""
+Task 12: Log Stats Analyzer
+"""
 from pymongo import MongoClient
 
-METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
-def log_stats(mongo_collection):
-    """Script that provides some stats about Nginx logs stored in MongoDB"""
-    # Conteo total de logs
-    total_logs = mongo_collection.count_documents({})
-    print(f'{total_logs} logs')
-    print('Methods:')
+def analyze_logs(logs):
+    """
+    Analyze logs and count HTTP methods and status checks.
 
-    # Conteo y impresión de documentos para cada método
-    for method in METHODS:
-        count = mongo_collection.count_documents({'method': method})
-        print(f'\tmethod {method}: {count}')
+    Parameters:
+    - logs (list): List of log documents.
 
-    # Conteo e impresión del número de chequeos de estado
-    status_check = mongo_collection.count_documents({'path': '/status'})
-    print(f'{status_check} status check')
+    Returns:
+    - tuple: A tuple containing a dictionary with counts
+      of HTTP methods and the number of status checks.
+    """
+    methods = {'GET': 0, 'POST': 0, 'PUT': 0, 'PATCH': 0, 'DELETE': 0}
+
+    status_check = 0
+
+    for doc in logs:
+        method = doc.get('method', '')
+        if method in methods:
+            methods[method] += 1
+
+        path = doc.get('path', '')
+        if path == '/status':
+            status_check += 1
+
+    return methods, status_check
+
+
+def print_results(log_count, methods, status_check):
+    """
+    Print log analysis results.
+
+    Parameters:
+    - log_count (int): Total number of logs.
+    - methods (dict): Dictionary containing counts
+      of each HTTP method.
+    - status_check (int): Number of status checks.
+
+    Returns:
+    - None
+    """
+    print(f"{log_count} logs\nMethods:")
+    for method, count in methods.items():
+        print(f"\tmethod {method}: {count}")
+    print(f"{status_check} status check")
+
 
 if __name__ == "__main__":
-    # Conexión a MongoDB
-    client = MongoClient('mongodb://127.0.0.1:27017/')
+    # Connect to MongoDB
+    client = MongoClient('mongodb://127.0.0.1:27017')
     nginx_collection = client.logs.nginx
-    log_stats(nginx_collection)
+
+    # Retrieve logs from MongoDB
+    logs = list(nginx_collection.find())
+    log_count = len(logs)
+
+    # Analyze logs
+    methods, status_check = analyze_logs(logs)
+
+    # Print results
+    print_results(log_count, methods, status_check)
     
